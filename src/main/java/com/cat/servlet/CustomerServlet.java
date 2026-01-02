@@ -48,16 +48,17 @@ public class CustomerServlet extends HttpServlet {
             writeJsonResponse(response, ApiResponse.error("服务器内部错误"));
         }
     }
-    
+
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         response.setContentType("application/json;charset=UTF-8");
         response.setCharacterEncoding("UTF-8");
-        
+
         try {
             String pathInfo = request.getPathInfo();
-            
-            if (pathInfo == null || pathInfo.equals("/")) {
+
+            // 修改点：同时支持 "/" 和 "/register" 作为注册接口
+            if (pathInfo == null || pathInfo.equals("/") || pathInfo.equals("/register")) {
                 handleRegister(request, response);
             } else if (pathInfo.equals("/login")) {
                 handleLogin(request, response);
@@ -67,7 +68,7 @@ public class CustomerServlet extends HttpServlet {
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
                 writeJsonResponse(response, ApiResponse.error("未找到对应的API端点"));
             }
-            
+
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             writeJsonResponse(response, ApiResponse.error("服务器内部错误"));
