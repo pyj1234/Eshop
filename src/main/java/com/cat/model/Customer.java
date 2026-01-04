@@ -12,9 +12,11 @@ public class Customer {
     private String phone;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private boolean isActive;
+    private boolean isActive = true;
     
-    public Customer() {}
+    public Customer() {
+        this.isActive = true;
+    }
     
     public Customer(String username, String email, String passwordHash, String firstName, String lastName) {
         this.username = username;

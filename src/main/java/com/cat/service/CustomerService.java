@@ -84,16 +84,27 @@ public class CustomerService {
         if (password == null || password.isEmpty()) {
             return new LoginResult(false, "密码不能为空", null);
         }
-        
+
         try {
+            // 【调试日志 1】
+            logger.info("正在尝试登录用户: [{}]", username);
+
             // 查找用户
             Customer customer = customerDAO.authenticate(username.trim(), password);
             if (customer == null) {
+                // 【调试日志 2】
+                logger.error("登录失败: 数据库未找到用户 [{}] (或该用户未激活)", username);
                 return new LoginResult(false, "用户名或密码错误", null);
             }
-            
+
+            // 【调试日志 3】
+            logger.info("用户 [{}] 存在，数据库Hash: [{}]", username, customer.getPasswordHash());
+
             // 验证密码
-            if (!PasswordUtil.verifyPassword(password, customer.getPasswordHash())) {
+            boolean passwordMatch = PasswordUtil.verifyPassword(password, customer.getPasswordHash());
+            if (!passwordMatch) {
+                // 【调试日志 4】
+                logger.error("登录失败: 密码验证不通过");
                 return new LoginResult(false, "用户名或密码错误", null);
             }
             

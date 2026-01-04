@@ -31,26 +31,39 @@ public class SecurityFilter implements Filter {
     public void init(FilterConfig filterConfig) throws ServletException {
         // 初始化代码
     }
-    
+
     @Override
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) 
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
-        
+
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
-        
+
         String path = httpRequest.getRequestURI();
         String contextPath = httpRequest.getContextPath();
         if (contextPath != null) {
             path = path.substring(contextPath.length());
         }
-        
-        // 检查是否为公共路径
+
+        // 【关键修改】优先放行所有 OPTIONS 请求 (CORS 预检)
+        if ("OPTIONS".equalsIgnoreCase(httpRequest.getMethod())) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        // 【关键修改】如果是 GET 请求，且访问的是商品相关接口，直接放行
+        // 这样 /api/products, /api/products/1, /api/products/search 统统不需要登录
+        if ("GET".equalsIgnoreCase(httpRequest.getMethod()) && path.startsWith("/api/products")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        // 检查公共路径 (保留之前的注册登录接口)
         if (isPublicPath(path)) {
             chain.doFilter(request, response);
             return;
         }
-        
+
         // 检查用户是否已登录
         HttpSession session = httpRequest.getSession(false);
         if (session == null || session.getAttribute("customerId") == null) {
@@ -62,7 +75,7 @@ public class SecurityFilter implements Filter {
             );
             return;
         }
-        
+
         // 检查管理员权限的路径
         if (path.startsWith("/api/admin/")) {
             String userType = (String) session.getAttribute("userType");
@@ -76,7 +89,7 @@ public class SecurityFilter implements Filter {
                 return;
             }
         }
-        
+
         // 通过所有检查，继续处理请求
         chain.doFilter(request, response);
     }
@@ -90,23 +103,6 @@ public class SecurityFilter implements Filter {
      * 检查路径是否为公共路径（不需要认证）
      */
     private boolean isPublicPath(String path) {
-        // 检查完全匹配的路径
-        if (PUBLIC_PATHS.contains(path)) {
-            return true;
-        }
-        
-        // 检查路径前缀
-        for (String prefix : PUBLIC_PATH_PREFIXES) {
-            if (path.startsWith(prefix)) {
-                // 排除需要认证的产品管理接口
-                if (!path.startsWith("/api/products/") || 
-                    (!path.contains("/stock") && 
-                     !path.matches("/api/products/\\d+"))) {
-                    return true;
-                }
-            }
-        }
-        
-        return false;
+        return PUBLIC_PATHS.contains(path);
     }
 }
